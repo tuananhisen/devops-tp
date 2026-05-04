@@ -1,0 +1,52 @@
+---
+# playbook.yml — Configuration de la VM avec k3s
+# Idempotent : peut être relancé sans effets de bord
+ 
+- name: Configuration de la VM Debian avec k3s
+  hosts: k3s_servers
+  become: yes
+ 
+  tasks:
+ 
+    - name: Mise à jour des paquets apt
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+ 
+    - name: Installation des dépendances nécessaires
+      apt:
+        name:
+          - curl
+          - wget
+          - git
+        state: present
+ 
+    - name: Vérifier si k3s est déjà installé
+      command: which k3s
+      register: k3s_check
+      ignore_errors: yes
+      changed_when: false
+ 
+    - name: Installation de k3s (si pas encore installé)
+      shell: curl -sfL https://get.k3s.io | sh -
+      when: k3s_check.rc != 0
+ 
+    - name: Attendre que k3s soit prêt
+      wait_for:
+        timeout: 30
+      when: k3s_check.rc != 0
+ 
+    - name: Vérifier que le service k3s est actif
+      systemd:
+        name: k3s
+        state: started
+        enabled: yes
+ 
+    - name: Vérifier les nodes k3s
+      command: k3s kubectl get nodes
+      register: nodes_output
+      changed_when: false
+ 
+    - name: Afficher les nodes
+      debug:
+        msg: "{{ nodes_output.stdout }}"
