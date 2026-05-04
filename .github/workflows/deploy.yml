@@ -38,5 +38,11 @@ jobs:
           sudo kubectl rollout restart deployment/node-api
           sudo kubectl rollout status deployment/node-api --timeout=120s
 
-      - name: Vérification
+      - name: Install node_exporter sur devops-vm
+        run: bash scripts/install_node_exporter.sh
+
+      - name: Vérification pods
         run: sudo kubectl get pods
+
+      - name: Vérification node_exporter
+        run: curl -s http://localhost:9100/metrics | head -5
